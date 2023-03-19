@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+import image1 from '@/assets/bouquet-1.png';
+import image2 from '@/assets/bouquet-2.png';
+import image3 from '@/assets/bouquet-3.png';
+
 const imagePaths = [
-  '/images/bouquet-1.png',
-  '/images/bouquet-2.png',
-  '/images/bouquet-3.png',
+  image1.src,
+  image2.src,
+  image3.src,
 ];
 
 type Bouquet = {

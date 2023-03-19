@@ -33,7 +33,8 @@ const bouquetMinWidth = 130;
 const bouquetMaxWidth = 200;
 const timeScale = 0.0002;
 const gravity = 70;
-const groundHeight = 0.65;
+const groundHeight = 0.6;
+const groundDepth = 0.68;
 const spawnInterval = 200;
 
 export default function BouquetCanvas() {
@@ -57,12 +58,18 @@ export default function BouquetCanvas() {
       bouquet.transform.rotation += bouquet.velocity.angular * scalar;
 
       bouquet.velocity.y += gravity * scalar;
-      if (
-        bouquet.velocity.y > 0 &&
-        bouquet.transform.y >= groundHeight - 0.1 + bouquet.transform.z * 0.18
-      ) {
-        bouquetsRef.current.splice(index, 1);
-        permaDrawQueueRef.current.push(bouquet);
+      if (bouquet.velocity.y > 0) {
+        if (bouquet.transform.y > 1.3) {
+          bouquetsRef.current.splice(index, 1);
+        }
+        if (
+          bouquet.transform.z <= groundDepth &&
+          bouquet.transform.y <= groundHeight + 0.1 &&
+          bouquet.transform.y >= groundHeight - 0.1 + bouquet.transform.z * 0.2
+        ) {
+          bouquetsRef.current.splice(index, 1);
+          permaDrawQueueRef.current.push(bouquet);
+        }
       }
     };
 
@@ -132,7 +139,7 @@ export default function BouquetCanvas() {
         velocity: {
           x: (0.5 - transform.x + Math.random() * 0.6 - 0.3) * 4,
           y: Math.random() * -2 - 8,
-          z: Math.random() * -0.7 - 2,
+          z: Math.random() * 0.7 - 2.1,
           angular: Math.sign(Math.random() - 0.5) * (Math.random() * 0.3 + 0.2) * 100,
         },
         scale: 1.5 + Math.random() * 0.4,

@@ -35,6 +35,7 @@ body {
     width: 100%;
     height: 100%;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     overflow: hidden;
@@ -45,6 +46,12 @@ body {
     padding: 0 10px;
     font-size: clamp(4rem, 4vw, 10rem);
     text-align: center;
+}
+
+.header > p {
+    position: absolute;
+    bottom: 0;
+    font-size: 2rem;
 }
 
 .bouquet-canvas-container {

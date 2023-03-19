@@ -44,46 +44,6 @@ export default function BouquetCanvas() {
   const permaDrawQueueRef = useRef<Bouquet[]>([]);
 
   useEffect(() => {
-    const spawnBouquet = () => {
-      if (imagesRef.current === null) return;
-      const randomImage = () => {
-        const images = imagesRef.current!;
-        return images[Math.floor(Math.random() * images.length)];
-      };
-      const transform = {
-        x: Math.random(),
-        y: 1,
-        z: 1,
-        rotation: Math.random(),
-      };
-      bouquetsRef.current?.push({
-        image: randomImage(),
-        transform,
-        velocity: {
-          x: (0.5 - transform.x + Math.random() * 0.6 - 0.3) * 4,
-          y: Math.random() * -2 - 8,
-          z: Math.random() * -0.7 - 1.5,
-          angular: Math.sign(Math.random() - 0.5) * (Math.random() * 0.3 + 0.2) * 100,
-        },
-        scale: 1.5 + Math.random() * 0.4,
-      });
-    };
-
-    let timer: NodeJS.Timeout;
-    const spawnNext = () => {
-      timer = setTimeout(() => {
-        spawnBouquet();
-        spawnNext();
-      }, 100);
-    };
-
-    spawnNext();
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
-
-  useEffect(() => {
     const fixedUpdate = () => {
       bouquetsRef.current.forEach(updateBouquet);
     };
@@ -121,17 +81,7 @@ export default function BouquetCanvas() {
     return () => { observer.disconnect(); };
   }, []);
 
-  useEffect(() => {
-    const loadImages = () => {
-      imagesRef.current = [];
-      return Promise.all(imagePaths.map(path => new Promise(resolve => {
-        const image = new Image();
-        image.onload = resolve;
-        image.src = path;
-        imagesRef.current!.push(image);
-      })));
-    };
-
+  const startRenderLoop = useCallback(() => {
     const render = () => {
       const canvas = canvasRef.current!;
       const ctx = canvas.getContext('2d')!;
@@ -178,12 +128,67 @@ export default function BouquetCanvas() {
         requestIdRef.current = null;
       }
     };
-    
-    const loadPromise = loadImages().then(requestTick);
+  
+    requestTick();
+    return cancelTicks;
+  }, []);
+
+  const startSpawnLoop = useCallback(() => {
+    const spawnBouquet = () => {
+      if (imagesRef.current === null) return;
+      const randomImage = () => {
+        const images = imagesRef.current!;
+        return images[Math.floor(Math.random() * images.length)];
+      };
+      const transform = {
+        x: Math.random(),
+        y: 1,
+        z: 1,
+        rotation: Math.random(),
+      };
+      bouquetsRef.current?.push({
+        image: randomImage(),
+        transform,
+        velocity: {
+          x: (0.5 - transform.x + Math.random() * 0.6 - 0.3) * 4,
+          y: Math.random() * -2 - 8,
+          z: Math.random() * -0.7 - 1.5,
+          angular: Math.sign(Math.random() - 0.5) * (Math.random() * 0.3 + 0.2) * 100,
+        },
+        scale: 1.5 + Math.random() * 0.4,
+      });
+    };
+
+    let timer: NodeJS.Timeout;
+    const spawnNext = () => {
+      timer = setTimeout(() => {
+        spawnBouquet();
+        spawnNext();
+      }, 100);
+    };
+
+    spawnNext();
     return () => {
-      loadPromise.finally(cancelTicks);
+      clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    const loadImages = () => {
+      imagesRef.current = [];
+      return Promise.all(imagePaths.map(path => new Promise(resolve => {
+        const image = new Image();
+        image.onload = resolve;
+        image.src = path;
+        imagesRef.current!.push(image);
+      }))).then(() => {});
+    };
+
+    loadImages().then(() => {
+      startRenderLoop();
+      startSpawnLoop();
+    });
+  }, [startRenderLoop, startSpawnLoop]);
 
   return (
     <div className='bouquet-canvas-container' ref={containerRef}>

@@ -43,7 +43,7 @@ body {
 .header > h1 {
     width: 100%;
     padding: 0 10px;
-    font-size: clamp(4rem, 3vw, 5rem);
+    font-size: clamp(4rem, 4vw, 10rem);
     text-align: center;
 }
 

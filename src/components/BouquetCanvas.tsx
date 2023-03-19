@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import image1 from '@/assets/bouquet-1.png';
 import image2 from '@/assets/bouquet-2.png';
 import image3 from '@/assets/bouquet-3.png';
+import gameLoop from '@/constants/gameLoop';
 
 const imagePaths = [
   image1.src,
@@ -30,31 +31,32 @@ type Bouquet = {
 const bouquetAvgScale = 0.1;
 const bouquetMinWidth = 130;
 const bouquetMaxWidth = 200;
-const timeScale = 0.005;
+const timeScale = 0.0002;
 const gravity = 70;
-const groundHeight = 0.8;
+const groundHeight = 0.65;
+const spawnInterval = 200;
 
 export default function BouquetCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const permaCanvasRef = useRef<HTMLCanvasElement>(null);
-  const requestIdRef = useRef<number | null>(null);
   const imagesRef = useRef<HTMLImageElement[] | null>(null);
   const bouquetsRef = useRef<Bouquet[]>([]);
   const permaDrawQueueRef = useRef<Bouquet[]>([]);
 
-  useEffect(() => {
-    const fixedUpdate = () => {
-      bouquetsRef.current.forEach(updateBouquet);
+  const startUpdateLoop = useCallback(() => {
+    const update = (delta: number) => {
+      bouquetsRef.current.forEach((bouquet, index) => updateBouquet(delta, bouquet, index));
     };
 
-    const updateBouquet = (bouquet: Bouquet, index: number) => {
-      bouquet.transform.x += bouquet.velocity.x * timeScale;
-      bouquet.transform.y += bouquet.velocity.y * timeScale;
-      bouquet.transform.z += bouquet.velocity.z * timeScale;
-      bouquet.transform.rotation += bouquet.velocity.angular * timeScale;
+    const updateBouquet = (delta: number, bouquet: Bouquet, index: number) => {
+      const scalar = timeScale * delta;
+      bouquet.transform.x += bouquet.velocity.x * scalar;
+      bouquet.transform.y += bouquet.velocity.y * scalar;
+      bouquet.transform.z += bouquet.velocity.z * scalar;
+      bouquet.transform.rotation += bouquet.velocity.angular * scalar;
 
-      bouquet.velocity.y += gravity * timeScale;
+      bouquet.velocity.y += gravity * scalar;
       if (
         bouquet.velocity.y > 0 &&
         bouquet.transform.y >= groundHeight - 0.1 + bouquet.transform.z * 0.18
@@ -64,10 +66,7 @@ export default function BouquetCanvas() {
       }
     };
 
-    const timer = setInterval(fixedUpdate, 1000 / 30);
-    return () => {
-      clearInterval(timer);
-    };
+    return gameLoop(update);
   }, []);
 
   useEffect(() => {
@@ -110,25 +109,8 @@ export default function BouquetCanvas() {
       ctx.drawImage(bouquet.image, -vw / 2, -vh / 2, vw, vh);
       ctx.restore();
     };
-
-    const tick = () => {
-      render();
-      requestTick();
-    };
-
-    const requestTick = () => {
-      requestIdRef.current = requestAnimationFrame(tick);
-    };
-
-    const cancelTicks = () => {
-      if (requestIdRef.current !== null) {
-        cancelAnimationFrame(requestIdRef.current);
-        requestIdRef.current = null;
-      }
-    };
-  
-    requestTick();
-    return cancelTicks;
+    
+    return gameLoop(render);
   }, []);
 
   const startSpawnLoop = useCallback(() => {
@@ -150,24 +132,18 @@ export default function BouquetCanvas() {
         velocity: {
           x: (0.5 - transform.x + Math.random() * 0.6 - 0.3) * 4,
           y: Math.random() * -2 - 8,
-          z: Math.random() * -0.7 - 1.5,
+          z: Math.random() * -0.7 - 2,
           angular: Math.sign(Math.random() - 0.5) * (Math.random() * 0.3 + 0.2) * 100,
         },
         scale: 1.5 + Math.random() * 0.4,
       });
     };
 
-    let timer: NodeJS.Timeout;
-    const spawnNext = () => {
-      timer = setTimeout(() => {
-        spawnBouquet();
-        spawnNext();
-      }, 250);
-    };
-
-    spawnNext();
+    console.log('starting spawn loop');
+    const timer = setInterval(spawnBouquet, spawnInterval);
     return () => {
-      clearTimeout(timer);
+      console.log('cancelling spawn loop');
+      clearInterval(timer);
     };
   }, []);
 
@@ -181,12 +157,25 @@ export default function BouquetCanvas() {
         imagesRef.current!.push(image);
       }))).then(() => {});
     };
-
-    loadImages().then(() => {
-      startRenderLoop();
-      startSpawnLoop();
+    
+    console.log('starting');
+    let cancelRender: (() => void) | undefined;
+    let cancelUpdate: (() => void) | undefined;
+    let cancelSpawn: (() => void) | undefined;
+    const loadPromise = loadImages().then(() => {
+      cancelRender = startRenderLoop();
+      cancelUpdate = startUpdateLoop();
+      cancelSpawn = startSpawnLoop();
     });
-  }, [startRenderLoop, startSpawnLoop]);
+    return () => {
+      console.log('ending');
+      loadPromise.then(() => {
+        cancelRender!();
+        cancelUpdate!();
+        cancelSpawn!();
+      });
+    };
+  }, [startRenderLoop, startUpdateLoop, startSpawnLoop]);
 
   return (
     <div className='bouquet-canvas-container' ref={containerRef}>

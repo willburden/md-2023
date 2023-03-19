@@ -101,15 +101,13 @@ export default function BouquetCanvas() {
       const h = w * bouquet.image.naturalHeight / bouquet.image.naturalWidth;
       const vw = w * bouquet.transform.z;
       const vh = h * bouquet.transform.z;
-      const x = bouquet.transform.x * canvas.width - (w / 2);
-      const y = bouquet.transform.y * canvas.height - (h / 2);
-      const hw = vw / 2;
-      const hh = vh / 2;
+      const x = bouquet.transform.x * canvas.width;
+      const y = bouquet.transform.y * canvas.height;
 
       ctx.save();
-      ctx.translate(x + hw, y + hh);
+      ctx.translate(x, y);
       ctx.rotate(bouquet.transform.rotation);
-      ctx.drawImage(bouquet.image, -hw, -hh, vw, vh);
+      ctx.drawImage(bouquet.image, -vw / 2, -vh / 2, vw, vh);
       ctx.restore();
     };
 

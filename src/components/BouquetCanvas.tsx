@@ -164,7 +164,7 @@ export default function BouquetCanvas() {
       timer = setTimeout(() => {
         spawnBouquet();
         spawnNext();
-      }, 100);
+      }, 250);
     };
 
     spawnNext();
